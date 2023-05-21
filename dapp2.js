@@ -1299,12 +1299,10 @@ const onLoadHandler = () => {
 			try {
 				provider = await web3Modal.connect();
 				walletButton.innerHTML = "<center>Disconnect</center>";
-				txLabel.innerHTML = warning;
 				await startApp();
-				//await updateBalance()
 			} catch (e) {
 				console.log("Could not get a wallet connection", e);
-				txLabel.innerHTML = "Wallet connection cancelled by user";
+				window.alert("Wallet connection cancelled by user");
 				return;
 			}
 		} else {
@@ -1318,7 +1316,6 @@ const onLoadHandler = () => {
 			console.log("clear cached");
 			provider = null;
 			walletAddress = 0;
-			balanceLabel.innerHTML = "-- " + ethSymbol;
 			walletButton.innerHTML = "Connect Wallet";
 		}
 	};
