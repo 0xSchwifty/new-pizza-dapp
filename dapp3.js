@@ -1301,8 +1301,7 @@ const onLoadHandler = () => {
 				walletButton.innerHTML = "<center>Disconnect</center>";
 				await startApp();
 			} catch (e) {
-				console.log("Could not get a wallet connection", e);
-				window.alert("Wallet connection cancelled by user");
+				console.log("Wallet connection cancelled by user", e);
 				return;
 			}
 		} else {
@@ -1323,8 +1322,8 @@ const onLoadHandler = () => {
 	const triggerPurchase = () => {
 		boxTxLabel.innerHTML = "Waiting for confirmation";
 		hide(buyButton);
-		// const gasPrice = 145;
-		// const gasLimit = 256 * 1000;
+		const gasPrice = 145;
+		const gasLimit = 256 * 1000;
 		let txHash = 0;
 		let numberToMint = selectMintQuantity.value;
 		BoxInstance.methods
@@ -1332,8 +1331,8 @@ const onLoadHandler = () => {
 			.send({
 				from: walletAddress,
 				value: priceInWei * numberToMint,
-				// gasPrice: web3.utils.toHex(gasPrice * 1e9),
-				// gasLimit: web3.utils.toHex(gasLimit),
+				gasPrice: web3.utils.toHex(gasPrice * 1e9),
+				gasLimit: web3.utils.toHex(gasLimit),
 			})
 			.on("transactionHash", (hash) => {
 				console.log("transactionHash: ", hash);
@@ -1344,7 +1343,7 @@ const onLoadHandler = () => {
 			.on("receipt", async (receipt) => {
 				console.log("receipt: ", receipt);
 				boxTxLabel.innerHTML = `Transaction confirmed, enjoy your 🍕! <p>
-        <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank' class="link-81"> Transaction link </a> </p>`;
+			     <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank' class="link-81"> Transaction link </a> </p>`;
 				await updateValues();
 			})
 			.on("error", (err, receipt) => {
@@ -1464,20 +1463,19 @@ const onLoadHandler = () => {
 		}
 	};
 
-	const handleUser = async () => {
+	const handleUser = () => {
 		console.log("handling user");
 
-		await web3.eth
+		web3.eth
 			.getAccounts()
 			.then(async (accounts) => {
 				addresses = accounts;
 
 				if (!accounts.length) {
-					walletAddress = 0;
 					walletButton.innerHTML = "<center>Connect Wallet</center>";
 				} else {
-					walletAddress = accounts[0];
-					walletButton.innerHTML = "<center>Connected</center>";
+					walletButton.innerHTML = "<center>Disconnect</center>";
+					walletAddress = (await web3.eth.getAccounts())[0];
 				}
 			})
 			.catch((err) => {
@@ -1485,22 +1483,18 @@ const onLoadHandler = () => {
 			});
 	};
 
-	const buyButtonHandler = async () => {
+	const buyButtonHandler = () => {
 		console.log("Buy button pressed");
+		console.log("addresses.length: ", addresses.length);
 
-		await handleUser();
 		if (!addresses.length) {
-			console.log("prompting metamask");
 			promptMetamask();
-		} else if (inActivePurchase) {
-			console.log("active purchase in progress");
 		} else {
-			console.log("triggering purchase");
 			triggerPurchase();
 		}
 	};
 
-	const bakePieHandler = async () => {
+	const triggerBaking = async () => {
 		console.log("Bake pie button pressed");
 		if (selectBox.options.length > 1) {
 			await handleUser();
@@ -1527,7 +1521,7 @@ const onLoadHandler = () => {
 						console.log("receipt: ", receipt);
 
 						pizzaWarning.innerHTML = `Transaction confirmed, enjoy your 🍕! <p>
-            <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank'> Transaction link </a> </p>`;
+			         <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank'> Transaction link </a> </p>`;
 
 						await updateValues();
 					})
@@ -1542,6 +1536,14 @@ const onLoadHandler = () => {
 						display(buyButton);
 					});
 			}
+		}
+	};
+
+	const bakePieHandler = () => {
+		if (!addresses.length) {
+			promptMetamask();
+		} else {
+			triggerBaking();
 		}
 	};
 
@@ -1589,6 +1591,7 @@ const onLoadHandler = () => {
 	};
 
 	const startApp = async () => {
+		console.log("APP STARTING");
 		// Web3Modal additions start
 		web3 = new Web3(provider);
 
@@ -1675,15 +1678,15 @@ const onLoadHandler = () => {
 
 		// Check that the web page is run in a secure context,
 		// as otherwise MetaMask won't be available
-		if (location.protocol !== "https:") {
-			// https://ethereum.stackexchange.com/a/62217/620
-			window.alert("Use https!");
-			// TO-DO: Disable connect/buy button
-			// const alert = document.querySelector("#alert-error-https");
-			// alert.style.display = "block";
-			// document.querySelector("#btn-connect").setAttribute("disabled", "disabled")
-			return;
-		}
+		// if (location.protocol !== "https:") {
+		// 	// https://ethereum.stackexchange.com/a/62217/620
+		// 	window.alert("Use https!");
+		// 	// TO-DO: Disable connect/buy button
+		// 	// const alert = document.querySelector("#alert-error-https");
+		// 	// alert.style.display = "block";
+		// 	// document.querySelector("#btn-connect").setAttribute("disabled", "disabled")
+		// 	return;
+		// }
 
 		// Tell Web3modal what providers we have available.
 		// Built-in web browser provider (only one can exist as a time)
