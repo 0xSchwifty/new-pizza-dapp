@@ -1223,6 +1223,7 @@ let ethPrice = 2045; // fallback (only used on v1 where pizza estimate were show
 let metamaskInstalled = false;
 let saleStart = 0;
 let inActivePurchase = false;
+let wrongNetworkMessage = "Change to ETH mainnet to use this dapp 🍕";
 
 // Helpers
 const numberWithCommas = (x) =>
@@ -1298,6 +1299,7 @@ const onLoadHandler = () => {
 			console.log("Opening a dialog", web3Modal);
 			try {
 				provider = await web3Modal.connect();
+				provider.chainId != "0x1" ? alert(wrongNetworkMessage) : null;
 				walletButton.innerHTML = "<center>Disconnect</center>";
 				await startApp();
 			} catch (e) {
@@ -1343,7 +1345,7 @@ const onLoadHandler = () => {
 			.on("receipt", async (receipt) => {
 				console.log("receipt: ", receipt);
 				boxTxLabel.innerHTML = `Transaction confirmed, enjoy your 🍕! <p>
-			     <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank' class="link-81"> Transaction link </a> </p>`;
+			              <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank' class="link-81"> Transaction link </a> </p>`;
 				await updateValues();
 			})
 			.on("error", (err, receipt) => {
@@ -1463,10 +1465,10 @@ const onLoadHandler = () => {
 		}
 	};
 
-	const handleUser = () => {
+	const handleUser = async () => {
 		console.log("handling user");
 
-		web3.eth
+		await web3.eth
 			.getAccounts()
 			.then(async (accounts) => {
 				addresses = accounts;
@@ -1476,6 +1478,7 @@ const onLoadHandler = () => {
 				} else {
 					walletButton.innerHTML = "<center>Disconnect</center>";
 					walletAddress = (await web3.eth.getAccounts())[0];
+					console.log("User wallet: ", walletAddress);
 				}
 			})
 			.catch((err) => {
@@ -1491,59 +1494,6 @@ const onLoadHandler = () => {
 			promptMetamask();
 		} else {
 			triggerPurchase();
-		}
-	};
-
-	const triggerBaking = async () => {
-		console.log("Bake pie button pressed");
-		if (selectBox.options.length > 1) {
-			await handleUser();
-
-			if (!addresses.length) {
-				console.log("prompting metamask");
-				promptMetamask();
-			} else {
-				console.log("Trying to bake");
-				console.log("parseFloat boxId", parseFloat(selectBox.value));
-				PizzaInstance.methods
-					.redeemRarePizzasBox(
-						parseFloat(selectBox.value),
-						parseFloat(selectRecipe.value)
-					)
-					.send({ from: walletAddress })
-					.on("transactionHash", (hash) => {
-						console.log("transactionHash: ", hash);
-
-						txHash = hash;
-						display(buyButton);
-					})
-					.on("receipt", async (receipt) => {
-						console.log("receipt: ", receipt);
-
-						pizzaWarning.innerHTML = `Transaction confirmed, enjoy your 🍕! <p>
-			         <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank'> Transaction link </a> </p>`;
-
-						await updateValues();
-					})
-					.on("error", (err, receipt) => {
-						console.log("Transaction failed: ", err, "br/", receipt);
-
-						if (err.code === 4001) {
-							pizzaTxLabel.innerHTML = "Transaction rejected";
-						} else {
-							pizzaTxLabel.innerHTML = "Something went wrong, try again!";
-						}
-						display(buyButton);
-					});
-			}
-		}
-	};
-
-	const bakePieHandler = () => {
-		if (!addresses.length) {
-			promptMetamask();
-		} else {
-			triggerBaking();
 		}
 	};
 
@@ -1577,6 +1527,55 @@ const onLoadHandler = () => {
 		}
 	};
 
+	const bakePieHandler = async () => {
+		console.log("Bake pie button pressed");
+		if (selectBox.options.length > 1) {
+			await handleUser();
+
+			if (!addresses.length) {
+				console.log("prompting metamask");
+				promptMetamask();
+			} else if (selectBox.value) {
+				console.log("selectBox.value: ", selectBox.value);
+				pizzaTxLabel.innerHTML = "Waiting for confirmation";
+				console.log("Trying to bake");
+				console.log("parseFloat boxId", parseFloat(selectBox.value));
+				PizzaInstance.methods
+					.redeemRarePizzasBox(
+						parseFloat(selectBox.value),
+						parseFloat(selectRecipe.value)
+					)
+					.send({ from: walletAddress })
+					.on("transactionHash", (hash) => {
+						console.log("transactionHash: ", hash);
+
+						txHash = hash;
+						display(buyButton);
+					})
+					.on("receipt", async (receipt) => {
+						console.log("receipt: ", receipt);
+
+						pizzaWarning.innerHTML = `Transaction confirmed, enjoy your 🍕! <p>
+			           <a href='https://${NETWORK}etherscan.io/tx/${txHash}' target='_blank'> Transaction link </a> </p>`;
+
+						await updateValues();
+					})
+					.on("error", (err, receipt) => {
+						console.log("Transaction failed: ", err, "br/", receipt);
+
+						if (err.code === 4001) {
+							pizzaTxLabel.innerHTML = "Transaction rejected";
+						} else {
+							pizzaTxLabel.innerHTML = "Something went wrong, try again!";
+						}
+						display(buyButton);
+					});
+			} else {
+				pizzaTxLabel.innerHTML = "Select the box you want to open";
+			}
+		}
+	};
+
 	const walletButtonHandler = () => {
 		console.log("Wallet button pressed");
 		// Metamask only
@@ -1597,18 +1596,22 @@ const onLoadHandler = () => {
 
 		// Subscribe to accounts change
 		provider.on("accountsChanged", (accounts) => {
+			console.log("accounts: ", accounts);
 			updateValues();
 			handleUser();
 		});
 
 		// Subscribe to chainId change
 		provider.on("chainChanged", (chainId) => {
+			console.log("chainId changed: ", chainId);
 			updateValues();
 			handleUser();
 		});
 
 		// Subscribe to networkId change
 		provider.on("networkChanged", (networkId) => {
+			console.log("networkId changed: ", networkId);
+			provider.chainId != "0x1" ? alert(wrongNetworkMessage) : null;
 			updateValues();
 			handleUser();
 		});
@@ -1744,7 +1747,7 @@ const onLoadHandler = () => {
 		};
 
 		web3Modal = new Web3Modal({
-			cacheProvider: false, // optional
+			cacheProvider: true, // optional
 			providerOptions, // required
 			disableInjectedProvider: false, // optional. For MetaMask / Brave / Opera.
 		});
